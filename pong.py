@@ -1,136 +1,127 @@
-import pygame
-from pygame.locals import *
+import pygame, sys, random
 
+#setup
 pygame.init()
+clock = pygame.time.Clock()
 
-window = pygame.display.set_mode((750, 500))
 
+def ball_animation ():
+    global ball_speed_x, ball_speed_y, player_score, cpu_score
+
+    ball.x += ball_speed_x
+    ball.y += ball_speed_y
+
+    if ball.top <= 0 or ball.bottom >= screen_height:
+        ball_speed_y *= -1
+
+    if ball.left <= 0:
+        player_score += 1
+        ball_restart()
+
+    if ball.right >= screen_width:
+        cpu_score += 1
+        ball_restart()
+
+    if ball.colliderect(player) or ball.colliderect(cpu):
+        ball_speed_x *= -1
+
+def player_animation ():
+    player.y += player_speed
+    if player.top <= 0:
+        player.top = 0
+    if player.bottom >= screen_height:
+        player.bottom = screen_height
+
+def cpu_animation ():
+    if cpu.top < ball.y:
+        cpu.top += cpu_speed
+    if cpu.bottom > ball.y:
+        cpu.bottom -= cpu_speed
+    if cpu.top <= 0:
+        cpu.top = 0
+    if cpu.bottom >= screen_height:
+        cpu.bottom = screen_height
+
+def ball_restart():
+    global ball_speed_y, ball_speed_x
+    ball.center = (screen_width/2, screen_height/2)
+    ball_speed_y *= random.choice((1, -1))
+    ball_speed_x *= random.choice((1, -1))
+
+#setting up game board
+
+screen_width = 1280
+screen_height = 960
+
+screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption("Pong")
 
-white = (255, 255, 255)
-black = (0, 0, 0)
-fpsClock = pygame.time.Clock()
-fps = 30
+#setting up the rectangles for the game
+ball = pygame.Rect(screen_width/2 - 15, screen_height/2 - 15, 30, 30)
+player = pygame.Rect(screen_width - 20, screen_height/2 - 70, 10,140)
+cpu = pygame.Rect(10, screen_height/2 - 70, 10, 140)
 
+bg_color = pygame.Color('blue')
+light_grey = (200,200,200)
 
+# game variables
+ball_speed_x = 7 * random.choice((1, -1))
+ball_speed_y = 7 * random.choice((1, -1))
+player_speed = 0
+cpu_speed = 30
 
-class Paddle(pygame.sprite.Sprite):
-    def __init__(self):
-        pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.Surface([10, 75])
-        self.image.fill(white)
-        self.rect = self.image.get_rect()
-        self.score = 0
-        self.dx = 1
-        self.dy = 1
+# text variables
+player_score = 0
+cpu_score = 0
+game_font = pygame.font.Font("freesansbold.ttf", 32)
 
-class Ball(pygame.sprite.Sprite):
-    def __init__(self):
-        pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.Surface([10, 10])
-        self.image.fill(white)
-        self.rect = self.image.get_rect()
-        self.speed = 10
-        self.dx = 1
-        self.dy = 1
+# Timer
+current_time = 0
+button_press_time = 0
 
-paddle1 = Paddle()
-paddle1.rect.x = 25
-paddle1.rect.y = 225
-
-paddle2 = Paddle()
-paddle2.rect.x = 715
-paddle2.rect.y = 225
-
-paddle_speed = 25
-
-ball = Ball()
-ball.rect.x = 375
-ball.rect.y = 250
-
-all_sprites = pygame.sprite.Group()
-all_sprites.add(paddle1, paddle2, ball)
-
-def reset():
-    window.fill(black)
-    
-    # font render
-    font = pygame.font.SysFont("Constantia", 30)
-    text = font.render("Pong", False, white)
-    textRect = text.get_rect()
-    textRect.center = (750 // 2, 25)
-    
-    #render on screen
-    window.blit(text, textRect)
-
-    #scores
-    p1_score = font.render(str(paddle1.score), False, white)
-    p1Rect = p1_score.get_rect()
-    p1Rect.center = (50, 50)
-    window.blit(p1_score, p1Rect)
-
-    p2_score = font.render(str(paddle2.score), False, white)
-    p2Rect = p2_score.get_rect()
-    p2Rect.center = (700, 50)
-    window.blit(p2_score, p2Rect)
-
-
-    all_sprites.draw(window)
-    pygame.display.update()
-
-
-
-run = True
-
-while run:
-    fpsClock.tick(fps)
-
-
+while True and current_time < 10000:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            run = False
+            pygame.quit()
+            sys.exit()
+        if event.type == pygame.KEYDOWN:
+            button_press_time = pygame.time.get_ticks()
+            if event.key == pygame.K_DOWN:
+                player_speed += 15
+            if event.key == pygame.K_UP:
+                player_speed -= 15
+        if event.type == pygame.KEYUP:
+            if event.key == pygame.K_DOWN:
+                player_speed -= 15
+            if event.key == pygame.K_UP:
+                player_speed += 15
+        
     
-    key = pygame.key.get_pressed()
-    if key[pygame.K_w]:
-        paddle1.rect.y -= paddle_speed
-    if key[pygame.K_s]:
-        paddle1.rect.y += paddle_speed
-    if key[pygame.K_UP]:
-        paddle2.rect.y -= paddle_speed
-    if key[pygame.K_DOWN]:
-        paddle2.rect.y += paddle_speed
+        
 
-    ball.rect.x += ball.speed * ball.dx
-    ball.rect.y += ball.speed * ball.dy
+    ball_animation()
+    player_animation()
+    cpu_animation()
+    
+    #timer
+    current_time = pygame.time.get_ticks()
 
-    # bounds collision for ball
-    if ball.rect.y > 490:
-        ball.dy = -1
-    
-    if ball.rect.x > 740:
-        ball.rect.x, ball.rect.y = 375, 250
-        ball.dx = -1
-        paddle1.score += 1
-    
-    if ball.rect.y < 10:
-        ball.dy = 1
-    
-    if ball.rect.x < 10:
-        ball.rect.x, ball.rect.y = 375, 250
-        ball.dx = 1
-        paddle2.score += 1
-    
-    if paddle1.rect.y > 490:
-        paddle1.dy = -1
-    
-    
-    # paddle collide code
-    if paddle1.rect.colliderect(ball.rect):
-        ball.dx = 1
-    
-    if paddle2.rect.colliderect(ball.rect):
-        ball.dx = -1
 
-    reset()
+    #display code
+    screen.fill(bg_color)
+    pygame.draw.rect(screen, light_grey, player)
+    pygame.draw.rect(screen, light_grey, cpu)
+    pygame.draw.ellipse(screen, light_grey, ball)
+    pygame.draw.aaline(screen, light_grey, (screen_width/2, 0), (screen_width/2, screen_height))
+
+    player_text = game_font.render(f"{player_score}", False, light_grey)
+    screen.blit(player_text, (660, 470))
+
+    cpu_text = game_font.render(f"{cpu_score}", False, light_grey)
+    screen.blit(cpu_text,(600, 470))
     
+    pygame.display.flip()
+    clock.tick(60)
+
 pygame.quit()
+print(cpu_score)
